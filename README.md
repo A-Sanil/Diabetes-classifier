@@ -14,7 +14,7 @@ Run the following command in your terminal to install dependencies:
 pip install -r requirements.txt
 
 
-
+```
 
 💡 Future Work
 Integrate SVM model into predictions
