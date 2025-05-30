@@ -11,8 +11,10 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, ExtraTr
 from sklearn.metrics import classification_report, accuracy_score
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 from sklearn.preprocessing import LabelEncoder
 import joblib
+from sklearn.linear_model import LogisticRegression
 
 input_file = 'diabetes_prediction_dataset.csv'
 # Load the dataset
@@ -101,24 +103,34 @@ results['Naive Bayes'] = {
 print(f"Naive Bayes Accuracy: {accuracy_nb:.4f}")
 print(classification_report(y_test, y_pred_nb))
 
-# Combine predictions: majority vote among Decision Tree, KNN, Extra Trees, and Naive Bayes
+# For Logistic Regression: drop 'gender' and 'smoking_history' (already done in X)
+logreg = LogisticRegression(max_iter=1000, random_state=42)
+logreg.fit(X_train, y_train)
+y_pred_logreg = logreg.predict(X_test)
+accuracy_logreg = accuracy_score(y_test, y_pred_logreg)
+report_logreg = classification_report(y_test, y_pred_logreg, output_dict=True)
+results['Logistic Regression'] = {
+    'accuracy': accuracy_logreg,
+    'report': report_logreg
+}
+print(f"Logistic Regression Accuracy: {accuracy_logreg:.4f}")
+print(classification_report(y_test, y_pred_logreg))
+
+# Combine predictions: majority vote among Decision Tree, KNN, Extra Trees, and Logistic Regression
 combined_pred = []
-for dt, knn_pred, et, nb_pred in zip(y_pred_tree, y_pred_knn, y_pred_extra, y_pred_nb):
-    votes = [dt, knn_pred, et, nb_pred]
+for dt, knn_pred, et, lr_pred in zip(y_pred_tree, y_pred_knn, y_pred_extra, y_pred_logreg):
+    votes = [dt, knn_pred, et, lr_pred]
     if votes.count(1) > 2:  # majority of 4
         combined_pred.append(1)
     else:
         combined_pred.append(0)
 
-# Evaluate combined predictions
-print("Quad Model (Decision Tree, KNN, Extra Trees, Naive Bayes) Majority Vote Accuracy:", accuracy_score(y_test_tree, combined_pred))
+print("Quad Model (Decision Tree, KNN, Extra Trees, Logistic Regression) Majority Vote Accuracy:", accuracy_score(y_test_tree, combined_pred))
 print(classification_report(y_test_tree, combined_pred))
 
 # Display all results in one line
-print("\nAccuracies: KNN={:.4f}, DecisionTree={:.4f}, ExtraTrees={:.4f}, NaiveBayes={:.4f}, QuadModel={:.4f}".format(
-    accuracy_knn, accuracy_tree, accuracy_extra, accuracy_nb, accuracy_score(y_test_tree, combined_pred)))
-
-# Display the results
+print("\nAccuracies: KNN={:.4f}, DecisionTree={:.4f}, ExtraTrees={:.4f}, LogisticRegression={:.4f}, QuadModel={:.4f}".format(
+    accuracy_knn, accuracy_tree, accuracy_extra, accuracy_logreg, accuracy_score(y_test_tree, combined_pred)))
 
 # === Move results display and saving to the end ===
 names = list(results.keys())
@@ -149,9 +161,7 @@ for feature in feature_names:
         pass
     input_data[feature] = [val]
 
-# For KNN: need 'smoking_history' encoded
-
-# For KNN: need 'smoking_history' encoded, but Extra Trees and Naive Bayes do not use it
+# For KNN: need 'smoking_history' encoded, but Extra Trees and Logistic Regression do not use it
 smoking_history = input("Enter smoking_history (never, No Info, current, former, not current, ever): ")
 try:
     smoking_encoded = le_smoke.transform([smoking_history])[0]
@@ -164,26 +174,51 @@ input_data_knn = input_data.copy()
 input_data_knn['smoking_history'] = [smoking_encoded]
 input_df_knn = pd.DataFrame(input_data_knn)
 
-# Prepare input for Extra Trees and Naive Bayes (no smoking_history column)
-input_df = pd.DataFrame(input_data)
-
-# Create DataFrame for prediction
+# Prepare input for Extra Trees and Logistic Regression (no smoking_history column)
 input_df = pd.DataFrame(input_data)
 
 # Predict with KNN
-
 knn_pred = knn.predict(input_df_knn)[0]
 print(f"KNN Prediction (1=Diabetes, 0=No Diabetes): {knn_pred}")
 
 # Predict with Extra Trees
-
 extra_pred = extra_trees.predict(input_df)[0]
 print(f"Extra Trees Prediction (1=Diabetes, 0=No Diabetes): {extra_pred}")
 
-# Predict with Naive Bayes
+# Predict with Logistic Regression
+logreg_pred = logreg.predict(input_df)[0]
+print(f"Logistic Regression Prediction (1=Diabetes, 0=No Diabetes): {logreg_pred}")
 
-nb_pred = nb.predict(input_df)[0]
-print(f"Naive Bayes Prediction (1=Diabetes, 0=No Diabetes): {nb_pred}")
+# Visualization: Decision Boundary for Logistic Regression
+# Select two features for visualization
+feature_x = 'age'
+feature_y = 'blood_glucose_level'
+
+X_vis = df[[feature_x, feature_y]].values
+y_vis = df['diabetes'].values
+
+# Fit a classifier (e.g., Logistic Regression)
+clf = LogisticRegression()
+clf.fit(X_vis, y_vis)
+
+# Create mesh grid
+x_min, x_max = X_vis[:, 0].min() - 1, X_vis[:, 0].max() + 1
+y_min, y_max = X_vis[:, 1].min() - 1, X_vis[:, 1].max() + 1
+xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.5),
+                     np.arange(y_min, y_max, 0.5))
+Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
+Z = Z.reshape(xx.shape)
+
+# Plot
+plt.figure(figsize=(8, 6))
+cmap_light = ListedColormap(['#FFAAAA', '#AAFFAA'])
+cmap_bold = ListedColormap(['#FF0000', '#00FF00'])
+plt.contourf(xx, yy, Z, alpha=0.3, cmap=cmap_light)
+plt.scatter(X_vis[:, 0], X_vis[:, 1], c=y_vis, cmap=cmap_bold, edgecolor='k', s=20)
+plt.xlabel(feature_x)
+plt.ylabel(feature_y)
+plt.title('Decision Boundary for Logistic Regression')
+plt.show()
 
 # === Move results display and saving to the end ===
 names = list(results.keys())
