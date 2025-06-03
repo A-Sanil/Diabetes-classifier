@@ -1,6 +1,6 @@
 Classifier,Accuracy
 KNN,0.95265
 Extra Trees,0.9674
-Decision Tree,0.9525
+Decision Tree,0.95215
 Naive Bayes,0.90555
 Logistic Regression,0.95875
