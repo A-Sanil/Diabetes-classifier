@@ -6,7 +6,7 @@ from sklearn.ensemble import ExtraTreesClassifier, VotingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix, roc_curve, auc
 from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
 import matplotlib.pyplot as plt
 
 # Load the dataset
@@ -33,6 +33,21 @@ X_test_knn_scaled = scaler_knn.transform(X_test_knn)
 
 knn = KNeighborsClassifier(n_neighbors=5)
 knn.fit(X_train_knn_scaled, y_train_knn)
+y_pred_knn = knn.predict(X_test_knn_scaled)
+print(f"KNN Accuracy: {accuracy_score(y_test_knn, y_pred_knn):.4f}")
+print(classification_report(y_test_knn, y_pred_knn))
+
+# --- Hyperparameter Tuning for KNN ---
+knn_param_grid = {'n_neighbors': [3, 5, 7, 9]}
+knn_grid = GridSearchCV(KNeighborsClassifier(), knn_param_grid, cv=5)
+knn_grid.fit(X_train_knn_scaled, y_train_knn)
+knn = knn_grid.best_estimator_
+print(f"Best KNN n_neighbors: {knn_grid.best_params_['n_neighbors']}")
+
+# Cross-validation for KNN
+knn_cv_scores = cross_val_score(knn, X_train_knn_scaled, y_train_knn, cv=5)
+print(f"KNN Cross-Validation Accuracy: {knn_cv_scores.mean():.4f}")
+
 y_pred_knn = knn.predict(X_test_knn_scaled)
 print(f"KNN Accuracy: {accuracy_score(y_test_knn, y_pred_knn):.4f}")
 print(classification_report(y_test_knn, y_pred_knn))
@@ -66,6 +81,21 @@ X_train_tree, X_test_tree, y_train_tree, y_test_tree = train_test_split(X_tree, 
 
 tree = DecisionTreeClassifier()
 tree.fit(X_train_tree, y_train_tree)
+y_pred_tree = tree.predict(X_test_tree)
+print(f"Decision Tree Accuracy: {accuracy_score(y_test_tree, y_pred_tree):.4f}")
+print(classification_report(y_test_tree, y_pred_tree))
+
+# --- Hyperparameter Tuning for Decision Tree ---
+tree_param_grid = {'max_depth': [3, 5, 7, None], 'min_samples_split': [2, 5, 10]}
+tree_grid = GridSearchCV(DecisionTreeClassifier(), tree_param_grid, cv=5)
+tree_grid.fit(X_train_tree, y_train_tree)
+tree = tree_grid.best_estimator_
+print(f"Best Decision Tree params: {tree_grid.best_params_}")
+
+# Cross-validation for Decision Tree
+tree_cv_scores = cross_val_score(tree, X_train_tree, y_train_tree, cv=5)
+print(f"Decision Tree Cross-Validation Accuracy: {tree_cv_scores.mean():.4f}")
+
 y_pred_tree = tree.predict(X_test_tree)
 print(f"Decision Tree Accuracy: {accuracy_score(y_test_tree, y_pred_tree):.4f}")
 print(classification_report(y_test_tree, y_pred_tree))
