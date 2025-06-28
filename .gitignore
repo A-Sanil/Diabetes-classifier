@@ -1,0 +1,10 @@
+# Ignore model and data files
+*.pkl
+*.zip
+*.csv
+
+# Ignore Python cache and environment files
+__pycache__/
+*.pyc
+.env
+.venv
