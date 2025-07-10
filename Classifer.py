@@ -1,6 +1,5 @@
 """
 Diabetes Classifier - Machine Learning Pipeline
-Author: Aadit Sanil
 Description: Predicts diabetes using multiple ML models, with hyperparameter tuning, cross-validation, and ensemble methods.
 """
 
@@ -8,13 +7,18 @@ import pandas as pd
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import ExtraTreesClassifier, VotingClassifier
+from sklearn.ensemble import ExtraTreesClassifier, VotingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix, roc_curve, auc
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
 import matplotlib.pyplot as plt
 import joblib
+try:
+    from xgboost import XGBClassifier
+    xgboost_available = True
+except ImportError:
+    xgboost_available = False
 
 def load_data(input_file):
     """Load and preview the diabetes dataset."""
@@ -67,6 +71,21 @@ def train_decision_tree(X, y):
     cv_scores = cross_val_score(tree, X, y, cv=5)
     print(f"Decision Tree Cross-Validation Accuracy: {cv_scores.mean():.4f}")
     return tree
+
+def train_random_forest(X, y):
+    """Train Random Forest Classifier."""
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X, y)
+    return model
+
+def train_xgboost(X, y):
+    """Train XGBoost Classifier if available."""
+    if not xgboost_available:
+        print("XGBoost is not installed. Skipping XGBoost model.")
+        return None
+    model = XGBClassifier(use_label_encoder=False, eval_metric='logloss', random_state=42)
+    model.fit(X, y)
+    return model
 
 def evaluate_model(model, X_test, y_test, scaler=None, name="Model"):
     """Print accuracy and classification report."""
@@ -125,13 +144,28 @@ def main():
     tree = train_decision_tree(X_train_tree, y_train_tree)
     y_pred_tree = evaluate_model(tree, X_test_tree, y_test_tree, name="Decision Tree")
 
-    # Voting Ensemble
-    voting_clf = VotingClassifier(estimators=[
+    # Random Forest: drop gender and smoking_history
+    rf = train_random_forest(X_train, y_train)
+    y_pred_rf = evaluate_model(rf, X_test, y_test, name="Random Forest")
+
+    # XGBoost: drop gender and smoking_history
+    if xgboost_available:
+        xgb = train_xgboost(X_train, y_train)
+        y_pred_xgb = evaluate_model(xgb, X_test, y_test, name="XGBoost")
+    else:
+        xgb = None
+
+    # Voting Ensemble (add Random Forest and XGBoost if available)
+    ensemble_estimators = [
         ('knn', KNeighborsClassifier(n_neighbors=5)),
         ('extra', ExtraTreesClassifier(n_estimators=100, random_state=42)),
         ('tree', DecisionTreeClassifier()),
-        ('logreg', LogisticRegression(max_iter=1000, random_state=42))
-    ], voting='hard')
+        ('logreg', LogisticRegression(max_iter=1000, random_state=42)),
+        ('rf', RandomForestClassifier(n_estimators=100, random_state=42))
+    ]
+    if xgboost_available:
+        ensemble_estimators.append(('xgb', XGBClassifier(use_label_encoder=False, eval_metric='logloss', random_state=42)))
+    voting_clf = VotingClassifier(estimators=ensemble_estimators, voting='hard')
     voting_clf.fit(X_train, y_train)
     ensemble_pred = voting_clf.predict(X_test)
     print(f"Voting Ensemble Accuracy: {accuracy_score(y_test, ensemble_pred):.4f}")
@@ -142,17 +176,19 @@ def main():
     print("Confusion Matrix (Logistic Regression):\n", cm)
     plot_roc_curve(logreg, X_test, y_test, scaler_logreg, name="Logistic Regression")
 
-    # Save models and encoders
-    joblib.dump(knn, "knn.pkl")
-    joblib.dump(extra_trees, "extra_trees.pkl")
-    joblib.dump(tree, "tree.pkl")
-    joblib.dump(logreg, "logreg.pkl")
-    joblib.dump(voting_clf, "voting_clf.pkl")
-    joblib.dump(le_smoke, "le_smoke.pkl")
-    joblib.dump(le_smoke_tree, "le_smoke_tree.pkl")
-    joblib.dump(le_gender_tree, "le_gender_tree.pkl")
-    joblib.dump(scaler_knn, "scaler_knn.pkl")
-    joblib.dump(scaler_logreg, "scaler_logreg.pkl")
+    # Load models and encoders from zip/rar file instead of saving new ones
+    # Example: extract and load with joblib from the archive
+    import os
+    import rarfile
+    archive_path = 'All pretrained model data.rar'
+    if os.path.exists(archive_path):
+        with rarfile.RarFile(archive_path) as rf:
+            for name in rf.namelist():
+                if name.endswith('.pkl'):
+                    rf.extract(name, path='.')
+        print('Extracted pretrained models from archive.')
+    else:
+        print('Archive with pretrained models not found.')
 
 if __name__ == "__main__":
     main()
