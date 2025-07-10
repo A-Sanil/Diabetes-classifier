@@ -30,6 +30,8 @@ This project predicts whether a person is diabetic based on clinical and demogra
 - **Extra Trees Classifier**
 - **Logistic Regression**
 - **Voting Ensemble (Super Majority)**
+- **XGBoost Classifier**
+- **Random Forest Classifier**
 
 ### 🔬 How scikit-learn Works
 - **Preprocessing:**
@@ -78,6 +80,8 @@ This will open a browser window for interactive predictions.
 | Extra Trees          | 0.97     |
 | Decision Tree        | 0.95     |
 | Logistic Regression  | 0.96     |
+| XGBoost              | 0.9712   |
+| Random Forest        | 0.9688   |
 | Voting Ensemble      | 0.97     |
 
 ![Confusion Matrix Example](https://scikit-learn.org/stable/_images/sphx_glr_plot_confusion_matrix_001.png)
@@ -102,6 +106,8 @@ KNN Prediction: 1 (Diabetes)
 Extra Trees Prediction: 1 (Diabetes)
 Decision Tree Prediction: 1 (Diabetes)
 Logistic Regression Prediction: 1 (Diabetes)
+XGBoost Prediction: 1 (Diabetes)
+Random Forest Prediction: 1 (Diabetes)
 Voting Ensemble Prediction: 1 (Diabetes)
 Super Majority Ensemble Prediction: 1 (Diabetes)
 ```
@@ -117,8 +123,15 @@ Diabetes-classifier/
 ├── requirements.txt
 ├── diabetes_prediction_dataset.csv
 ├── .gitignore
+├── All pretrained model data.rar
 └── README.md
 ```
+
+---
+
+## ℹ️ What does `app.py` do?
+
+`app.py` provides a simple Flask web application for interactive diabetes prediction. You can enter patient data in a web form, and the app will use the trained models to predict diabetes risk in real time. This makes the project accessible to non-technical users and is useful for demos or deployment.
 
 ---
 
